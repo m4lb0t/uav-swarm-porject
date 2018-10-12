@@ -188,6 +188,8 @@ if ret:
     print("Processing video...")
     while True:
         # Get time at beginning of loop for frame rate calculation
+        if dt > 0:
+            FPS = 1/dt
         t = time.time()
         ret, frame = cap.read()
         if not ret:
@@ -197,14 +199,15 @@ if ret:
         # This is where the magic happens....
         structureFromMotion.update()
         structureFromMotion.frame_points = structureFromMotion.get_frame_points(frame)
+        cv2.putText(frame, "FPS: %.0f" % FPS,(10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255,255,255), 1 )
+        cv2.imshow("", frame)
         # Keyboard input handling
-        k = cv2.waitKey(30) & 0xff
+        k = cv2.waitKey(1) & 0xff
         if k == 27:
             break
 
         # Update delta time and display frame rate
         dt = time.time() - t
-        FPS = 1/dt
         if FPS > maxFPS:
             maxFPS = FPS
         if FPS < minFPS:
