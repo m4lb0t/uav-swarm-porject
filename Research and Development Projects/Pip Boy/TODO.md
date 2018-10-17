@@ -9,6 +9,8 @@
 - Check CPU Usage and optimize if needed
 - Add "Help" features
 - Further refactor PipBoyUI.py
+- Add unit tests
+- Convert to package for more modularity
 
 ## Tasks Completed:
 - Added timer UI
