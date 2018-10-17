@@ -28,7 +28,6 @@ class PipBoyUI(object):
 
         It should be noted that PyQt Code such as this is not meant to be
         modified (even this much is excessive).
-        Due to this, I will be avoiding further refactoring
         """
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(800, 480)
