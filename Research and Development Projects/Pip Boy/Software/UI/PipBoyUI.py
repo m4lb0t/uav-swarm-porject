@@ -123,7 +123,7 @@ def main():
     ui = PipBoyUI()
     ui.setupUi(MainWindow)
     MainWindow.show()
-    sys.exit()
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
