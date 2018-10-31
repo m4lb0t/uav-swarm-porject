@@ -10,3 +10,6 @@ TODO
     * https://en.wikipedia.org/wiki/Fast_inverse_square_root
 * Fix warping of position near edges in StructureFromMotion.calculate_camera_space_position_of_feature
 * Add rotation to **global** position calculation in StructureFromMotion.get_frame_points
+* Add missing math equations to README.md
+* Add example video to README.md
+* Add illustrations to README.md
