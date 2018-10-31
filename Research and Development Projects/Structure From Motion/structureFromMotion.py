@@ -13,8 +13,8 @@ import time
 
 class StructureFromMotion:
 	def __init__(self, camera_pos=np.array([0, 0, 0]), camera_vel=np.array([0, 0, 0]), camera_rot=np.array([0, 0, 0]),
-				 camera_rvel=np.array([0, 0, 0]), camera_space=False,
-				 target_scale=(640, 360), focal_length=38.199):
+	             camera_rvel=np.array([0, 0, 0]), camera_space=False,
+	             target_scale=(640, 360), focal_length=38.199):
 		self.target_scale = target_scale
 		self.focal_length = focal_length
 		self.camera_pos = camera_pos
@@ -22,16 +22,15 @@ class StructureFromMotion:
 		self.camera_rot = camera_rot
 		self.camera_rvel = camera_rvel
 
-		# TODO Try with SIFT features
 		# params for Shi-Tomasi corner detection
 		self.feature_params = dict(maxCorners=30,
-								   qualityLevel=0.3,
-								   minDistance=7,
-								   blockSize=7)
+		                           qualityLevel=0.3,
+		                           minDistance=7,
+		                           blockSize=7)
 		# Parameters for lucas kanade optical flow
 		self.lk_params = dict(winSize=(15, 15),
-							  maxLevel=3,
-							  criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+		                      maxLevel=3,
+		                      criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
 		self.center = np.array([target_scale[0] / 2, target_scale[1] / 2])
 
@@ -86,11 +85,8 @@ class StructureFromMotion:
 		:return: float: distance along z axis from camera
 
 		Calculates the z-axis position from the disparity.
-		TODO Or does it? Verify that it is not simply the straight line distance from camera...
 		"""
 		# Calculate the vector pointing from the old feature position to the center of the frame (Vanishing point)
-		# TODO Try normalizing with Fast InvSqrt()
-		# https://en.wikipedia.org/wiki/Fast_inverse_square_root
 		radial_vector = self.center - disparity_origin
 		radial_vector = radial_vector / np.linalg.norm(radial_vector)
 
@@ -109,11 +105,11 @@ class StructureFromMotion:
 
 		# Weight each axis of the disparity according to camera velocity (dot product)
 		weighted_disparity = x_disparity * self.camera_vel[0] + \
-							y_disparity * self.camera_vel[1] + \
-							z_disparity * self.camera_vel[2] + \
-							pitch_disparity * self.camera_rvel[0] + \
-							yaw_disparity * self.camera_rvel[1] + \
-							roll_disparity * self.camera_rvel[2]
+		                     y_disparity * self.camera_vel[1] + \
+		                     z_disparity * self.camera_vel[2] + \
+		                     pitch_disparity * self.camera_rvel[0] + \
+		                     yaw_disparity * self.camera_rvel[1] + \
+		                     roll_disparity * self.camera_rvel[2]
 
 		# Distance is inversely proportional to length of disparity
 		distance = self.focal_length / weighted_disparity
@@ -133,7 +129,6 @@ class StructureFromMotion:
 		disparity = new - old
 		distance = self.calculate_distance_from_disparity(old, disparity)
 
-		# TODO Fix warping of position near edges
 		# x = new[0] / focal_length * (distance * width) / 1000
 		# y = new[1] / focal_length * (distance * height) / 1000
 		# For now:
@@ -167,7 +162,6 @@ class StructureFromMotion:
 			for i, (new, old) in enumerate(zip(good_new, good_old)):
 				cam_pos = self.calculate_camera_space_position_of_feature(new, old)
 				if not self.find_in_camera_space:
-					# TODO Camera rotation
 					world_pos = cam_pos + self.camera_pos  # Transforms from camera space to world space
 					frame_points.append(world_pos)
 				else:
@@ -207,10 +201,10 @@ out = cv2.VideoWriter('rotation.avi', -1, 30.0, (640 * 2, 360))
 cap = cv2.VideoCapture(video_source)
 
 structureFromMotion = StructureFromMotion(camera_pos=np.array([0, 0, 0]),
-										  camera_vel=np.array((0, 0, 0)),
-                                          camera_rot=np.array([0,0,0]),
-                                          camera_rvel=np.array([0,2,0]),
-										  camera_space=True)
+                                          camera_vel=np.array((0, 0, 0)),
+                                          camera_rot=np.array([0, 0, 0]),
+                                          camera_rvel=np.array([0, 2, 0]),
+                                          camera_space=True)
 ret, first_frame = cap.read()
 minFPS = 1000
 maxFPS = 0
@@ -225,7 +219,7 @@ if ret:
 			FPS = 1 / dt
 		t = time.time()
 		ret, frame = cap.read()
-		dread = time.time() -t
+		dread = time.time() - t
 		print(dread)
 		if not ret:
 			print("End of stream.")
@@ -242,7 +236,7 @@ if ret:
 		wt = time.time()
 		out.write(final)
 		dwt = time.time() - wt
-		#cv2.imshow("", final)
+		# cv2.imshow("", final)
 		# Keyboard input handling
 		k = cv2.waitKey(30) & 0xff
 		if k == 27:
