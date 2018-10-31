@@ -113,7 +113,7 @@ def main():
         This is to ensure that it fits on the needed raspberry pi
         screen (linked below), with minimal screen space wastage
 
-    The dimentions used here are based on the following raspberry pi screen:
+    The dimensions used here are based on the following raspberry pi screen:
         https://www.adafruit.com/product/3578
     """
     import sys
