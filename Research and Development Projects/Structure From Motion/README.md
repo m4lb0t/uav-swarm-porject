@@ -37,6 +37,6 @@ disparities in the x, y, and radial directions, and _velocity_ is the 3D velocit
 See also the list of [contributors](https://github.com/m4lb0t/uav-swarm-project/contributors) who participated in this project.
 
 ## Additional Reading
-https://docs.opencv.org/3.3.1/d7/d8b/tutorial_py_lucas_kanade.html
-https://ieeexplore.ieee.org/document/6749315
-https://etd.ohiolink.edu/rws_etd/document/get/dayton1366386933/inline
+- https://docs.opencv.org/3.3.1/d7/d8b/tutorial_py_lucas_kanade.html
+- https://ieeexplore.ieee.org/document/6749315
+- https://etd.ohiolink.edu/rws_etd/document/get/dayton1366386933/inline
