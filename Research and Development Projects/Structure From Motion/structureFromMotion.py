@@ -82,7 +82,8 @@ class StructureFromMotion:
 		"""
 		self.camera_vel = new_velocity
 
-	def preprocess_frame(self, raw_frame):
+	@staticmethod
+	def preprocess_frame(raw_frame):
 		"""
 		:param raw_frame: Raw frame from VideoCapture
 		:return: Processed frame
