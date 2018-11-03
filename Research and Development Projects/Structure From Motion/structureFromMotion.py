@@ -15,7 +15,13 @@ class StructureFromMotion:
 	def __init__(self, camera_pos=np.array([0, 0, 0]), camera_vel=np.array([0, 0, 0]), camera_rot=np.array([0, 0, 0]),
 	             camera_rvel=np.array([0, 0, 0]), camera_space=False,
 	             target_scale=(640, 360), focal_length=38.199):
-		self._setupCamera(target_scale, focal_length, camera_pos, camera_vel, camera_rot, camera_rvel, camera_space)
+		self._setupCamera(target_scale,
+						  focal_length,
+						  camera_pos,
+						  camera_vel,
+						  camera_rot,
+						  camera_rvel,
+						  camera_space)
 		self._setupAlgosPrams()
 		self._setupMisc()
 
@@ -49,9 +55,9 @@ class StructureFromMotion:
 		"""
 		# params for Shi-Tomasi corner detection
 		self.feature_params = dict(maxCorners=30,
-		                           qualityLevel=0.3,
+		                           qualityLevel=0.5,
 		                           minDistance=7,
-		                           blockSize=7)
+		                           blockSize=11)
 
 		# Parameters for lucas kanade optical flow
 		self.lk_params = dict(winSize=(15, 15),
@@ -65,13 +71,13 @@ class StructureFromMotion:
 			- self.global_points
 			- self.frame_points
 			- self.previous_frame
-			- self.p0
+			- self.previous_frame_points
 		"""
 		self.center = np.array([self.target_scale[0] / 2, self.target_scale[1] / 2])
 		self.global_points = np.array([])
 		self.frame_points = np.array([])
 		self.previous_frame = None
-		self.p0 = None
+		self.previous_frame_points = np.array([])
 
 	def set_camera_velocity(self, new_velocity):
 		"""
@@ -104,8 +110,8 @@ class StructureFromMotion:
 
 		Calculates Optical Flow using Lucas-Kanada algorithm
 		"""
-		p1, st, err = cv2.calcOpticalFlowPyrLK(self.previous_frame, current_frame, self.p0, None, **self.lk_params)
-		good_old = self.p0[st == 1]
+		p1, st, err = cv2.calcOpticalFlowPyrLK(self.previous_frame, current_frame, self.previous_frame_points, None, **self.lk_params)
+		good_old = self.previous_frame_points[st == 1]
 
 		if p1 is not None:
 			good_new = p1[st == 1]
@@ -128,7 +134,7 @@ class StructureFromMotion:
 		x_disparity, y_disparity, z_disparity = self._distributeDisparity(disparity, radial_vector)
 
 		# Rotational disparities
-		roll_disparity, yaw_disparity, pitch_disparity = self._calcRotationalDisparities(radial_vector, x_disparity, yaw_disparity)
+		roll_disparity, yaw_disparity, pitch_disparity = self._calcRotationalDisparities(radial_vector, x_disparity, z_disparity)
 
 		# Weight each axis of the disparity according to camera velocity (dot product)
 		weighted_disparity = self._calcWeightedDisparity(x_disparity,
@@ -221,7 +227,7 @@ class StructureFromMotion:
 
 		Calculates the z-axis position from the disparity.
 		"""
-		distance = self.focal_length / weighted_disparity
+		distance = self.focal_length/(weighted_disparity*10)
 		return distance
 
 	def calculate_camera_space_position_of_feature(self, new, old):
@@ -254,7 +260,7 @@ class StructureFromMotion:
 		Initializes the instance with the previous frame, and finds points to track
 		"""
 		self.previous_frame = self.preprocess_frame(raw_previous_frame)
-		self.p0 = cv2.goodFeaturesToTrack(self.previous_frame, mask=None, **self.feature_params)
+		self.previous_frame_points = cv2.goodFeaturesToTrack(self.previous_frame, mask=None, **self.feature_params)
 
 	def get_frame_points(self, current_frame, ):
 		"""
@@ -275,8 +281,8 @@ class StructureFromMotion:
 					frame_points.append(world_pos)
 				else:
 					frame_points.append(cam_pos)
-			self.p0 = good_new.reshape(-1, 1, 2)
-
+			# self.previous_frame_points = good_new.reshape(-1, 1, 2)
+			self.previous_frame_points = cv2.goodFeaturesToTrack(self.previous_frame, mask=None, **self.feature_params)
 		self.previous_frame = current_frame.copy()
 
 		return frame_points
@@ -289,10 +295,13 @@ def draw_3d_topdown_view(image, points, y_zoom=1, z_zoom=10):
 	height = image.shape[0]
 
 	for p in points:
-		x = int(p[0])
-		y = int(255 * p[1] / (height * y_zoom))
-		z = int(height - height * p[2] / z_zoom)
-		cv2.circle(image, (x, z), 5, (y, y, y), -1)
+		try:
+			x = int(p[0])
+			y = int(255 * p[1] / (height * y_zoom))
+			z = int(height - height * p[2] / z_zoom)
+			cv2.circle(image, (x, z), 5, (y, y, y), -1)
+		except OverflowError:
+			pass
 
 
 def draw_tracked_points(image, points):
@@ -300,22 +309,25 @@ def draw_tracked_points(image, points):
 		x = int(p[0])
 		y = int(p[1])
 		cv2.circle(image, (x, y), 3, (0, 0, 255), -1)
-		if p[2] < 5:
+		if p[2] < 100:
 			cv2.putText(image, "%.1f" % p[2], (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 1)
 
 
-video_source = "rotationsample.avi"
-out = cv2.VideoWriter('rotation.avi', -1, 30.0, (640 * 2, 360))
+video_source = "ringtest.avi"
+out = cv2.VideoWriter('ringtest_output.avi', -1, 30.0, (640 * 2, 360))
 cap = cv2.VideoCapture(video_source)
 
 structureFromMotion = StructureFromMotion(camera_pos=np.array([0, 0, 0]),
-                                          camera_vel=np.array((0, 0, 0)),
+                                          camera_vel=np.array((0, 0, 1)),
                                           camera_rot=np.array([0, 0, 0]),
-                                          camera_rvel=np.array([0, 2, 0]),
-                                          camera_space=True)
+                                          camera_rvel=np.array([0, 0, 0]),
+                                          camera_space=True,
+										  focal_length=38.199,
+										  target_scale=(640, 360))
 ret, first_frame = cap.read()
 minFPS = 1000
 maxFPS = 0
+FPS_vals = []
 if ret:
 	structureFromMotion.initialize(first_frame)
 
@@ -356,10 +368,12 @@ if ret:
 			maxFPS = FPS
 		if FPS < minFPS:
 			minFPS = FPS
+		FPS_vals.append(FPS)
+
 else:
 	print("Problem with video stream... Unable to capture first frame")
-
-print("Min FPS: %f MaxFPS: %f" % (minFPS, maxFPS))
+avgFps = sum(FPS_vals)/len(FPS_vals)
+print("Min FPS: %f MaxFPS: %f AvgFPS: %f" % (minFPS, maxFPS, avgFps))
 # Clean up
 out.release()
 cap.release()
