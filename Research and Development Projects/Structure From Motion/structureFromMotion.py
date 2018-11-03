@@ -88,8 +88,7 @@ class StructureFromMotion:
 		"""
 		self.camera_vel = new_velocity
 
-	@staticmethod
-	def preprocess_frame(raw_frame):
+	def preprocess_frame(self, raw_frame):
 		"""
 		:param raw_frame: Raw frame from VideoCapture
 		:return: Processed frame
@@ -245,13 +244,11 @@ class StructureFromMotion:
 		disparity = new - old
 		distance = self.calculate_distance_from_disparity(old, disparity)
 
-		# x = new[0] / focal_length * (distance * width) / 1000
-		# y = new[1] / focal_length * (distance * height) / 1000
-		# For now:
-		x = new[0]
-		y = new[1]
+		x = (new[0] - self.target_scale[0]/2)*distance / (self.focal_length * self.target_scale[0]) * 1000
+		y = (new[1] - self.target_scale[1]/2)*distance / (self.focal_length * self.target_scale[1]) * 1000
+		print(x, y)
 
-		return np.array([x, y, distance])
+		return np.array([x, y, distance, new[0], new[1]])
 
 	def initialize(self, raw_previous_frame):
 		"""
@@ -292,13 +289,13 @@ class StructureFromMotion:
 		global dt
 		self.camera_pos = self.camera_pos + self.camera_vel * dt
 
-def draw_3d_topdown_view(image, points, y_zoom=1, z_zoom=10):
+def draw_3d_topdown_view(image, points, y_zoom=1, z_zoom=20):
 	height = image.shape[0]
-
+	width = image.shape[1]
 	for p in points:
 		try:
-			x = int(p[0])
-			y = int(255 * p[1] / (height * y_zoom))
+			x = int(p[0]*z_zoom+width/2)
+			y = int(255) #* p[1] / (height * y_zoom))
 			z = int(height - height * p[2] / z_zoom)
 			cv2.circle(image, (x, z), 5, (y, y, y), -1)
 		except OverflowError:
@@ -306,12 +303,15 @@ def draw_3d_topdown_view(image, points, y_zoom=1, z_zoom=10):
 
 
 def draw_tracked_points(image, points):
-	for p in points:
-		x = int(p[0])
-		y = int(p[1])
-		cv2.circle(image, (x, y), 3, (0, 0, 255), -1)
-		if p[2] < 100:
-			cv2.putText(image, "%.1f" % p[2], (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 1)
+	try:
+		for p in points:
+			x = int(p[3])
+			y = int(p[4])
+			cv2.circle(image, (x, y), 3, (0, 0, 255), -1)
+			if p[2] < 100:
+				cv2.putText(image, "%.1f" % p[2], (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 1)
+	except OverflowError:
+		pass
 
 
 video_source = "ringtest.avi"
@@ -324,7 +324,7 @@ structureFromMotion = StructureFromMotion(camera_pos=np.array([0, 0, 0]),
                                           camera_rvel=np.array([0, 0, 0]),
                                           camera_space=True,
 										  focal_length=38.199,
-										  target_scale=(640, 360))
+										  target_scale=(360, 640))
 ret, first_frame = cap.read()
 minFPS = 1000
 maxFPS = 0
@@ -341,7 +341,6 @@ if ret:
 		t = time.time()
 		ret, frame = cap.read()
 		dread = time.time() - t
-		print(dread)
 		if not ret:
 			print("End of stream.")
 			break
@@ -357,7 +356,7 @@ if ret:
 		wt = time.time()
 		out.write(final)
 		dwt = time.time() - wt
-		# cv2.imshow("", final)
+		cv2.imshow("", final)
 		# Keyboard input handling
 		k = cv2.waitKey(30) & 0xff
 		if k == 27:
