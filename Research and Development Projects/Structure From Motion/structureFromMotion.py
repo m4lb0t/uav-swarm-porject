@@ -172,8 +172,7 @@ class StructureFromMotion:
 
 		return frame_points
 
-	def update(self):
-		global dt
+	def update(self, dt):
 		self.camera_pos = self.camera_pos + self.camera_vel * dt
 
 
@@ -196,63 +195,67 @@ def draw_tracked_points(image, points):
 			cv2.putText(image, "%.1f" % p[2], (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 1)
 
 
-video_source = "rotationsample.avi"
-out = cv2.VideoWriter('rotation.avi', -1, 30.0, (640 * 2, 360))
-cap = cv2.VideoCapture(video_source)
+def main():
+	video_source = "ringtest.avi"
+	out = cv2.VideoWriter('ring_output.avi', -1, 30.0, (640 * 2, 360))
+	cap = cv2.VideoCapture(video_source)
 
-structureFromMotion = StructureFromMotion(camera_pos=np.array([0, 0, 0]),
-                                          camera_vel=np.array((0, 0, 0)),
-                                          camera_rot=np.array([0, 0, 0]),
-                                          camera_rvel=np.array([0, 2, 0]),
-                                          camera_space=True)
-ret, first_frame = cap.read()
-minFPS = 1000
-maxFPS = 0
-if ret:
-	structureFromMotion.initialize(first_frame)
+	structureFromMotion = StructureFromMotion(camera_pos=np.array([0, 0, 0]),
+	                                          camera_vel=np.array((0, 0, 5)),
+	                                          camera_rot=np.array([0, 0, 0]),
+	                                          camera_rvel=np.array([0, 0, 0]),
+	                                          camera_space=True)
+	ret, first_frame = cap.read()
 
-	dt = 1 / 20
-	print("Processing video...")
-	while True:
-		# Get time at beginning of loop for frame rate calculation
-		if dt > 0:
-			FPS = 1 / dt
-		t = time.time()
-		ret, frame = cap.read()
-		dread = time.time() - t
-		print(dread)
-		if not ret:
-			print("End of stream.")
-			break
+	minFPS = 1000
+	maxFPS = 0
+	if ret:
+		structureFromMotion.initialize(first_frame)
 
-		# This is where the magic happens....
-		structureFromMotion.update()
-		structureFromMotion.frame_points = structureFromMotion.get_frame_points(frame)
-		draw_tracked_points(frame, structureFromMotion.frame_points)
-		cv2.putText(frame, "FPS: %.0f" % FPS, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1)
-		topdown = np.zeros_like(frame)
-		draw_3d_topdown_view(topdown, structureFromMotion.frame_points)
-		final = np.hstack((frame, topdown))
-		wt = time.time()
-		out.write(final)
-		dwt = time.time() - wt
-		# cv2.imshow("", final)
-		# Keyboard input handling
-		k = cv2.waitKey(30) & 0xff
-		if k == 27:
-			break
+		dt = 1 / 20
+		print("Processing video...")
+		while True:
+			# Get time at beginning of loop for frame rate calculation
+			if dt > 0:
+				FPS = 1 / dt
+			t = time.time()
+			ret, frame = cap.read()
+			dread = time.time() - t
+			if not ret:
+				print("End of stream.")
+				break
 
-		# Update delta time and display frame rate
-		dt = time.time() - t - 0.030 - dwt
-		if FPS > maxFPS:
-			maxFPS = FPS
-		if FPS < minFPS:
-			minFPS = FPS
-else:
-	print("Problem with video stream... Unable to capture first frame")
+			# This is where the magic happens....
+			structureFromMotion.update(dt)
+			structureFromMotion.frame_points = structureFromMotion.get_frame_points(frame)
+			draw_tracked_points(frame, structureFromMotion.frame_points)
+			cv2.putText(frame, "FPS: %.0f" % FPS, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1)
+			topdown = np.zeros_like(frame)
+			draw_3d_topdown_view(topdown, structureFromMotion.frame_points)
+			final = np.hstack((frame, topdown))
+			wt = time.time()
+			out.write(final)
+			dwt = time.time() - wt
+			# cv2.imshow("", final)
+			# Keyboard input handling
+			k = cv2.waitKey(30) & 0xff
+			if k == 27:
+				break
 
-print("Min FPS: %f MaxFPS: %f" % (minFPS, maxFPS))
-# Clean up
-out.release()
-cap.release()
-cv2.destroyAllWindows()
+			# Update delta time and display frame rate
+			dt = time.time() - t - 0.030 - dwt
+			if FPS > maxFPS:
+				maxFPS = FPS
+			if FPS < minFPS:
+				minFPS = FPS
+	else:
+		print("Problem with video stream... Unable to capture first frame")
+
+	print("Min FPS: %f MaxFPS: %f" % (minFPS, maxFPS))
+	# Clean up
+	out.release()
+	cap.release()
+	cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+	main()
