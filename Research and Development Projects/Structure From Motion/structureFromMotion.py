@@ -23,10 +23,10 @@ class StructureFromMotion:
 		self.camera_rvel = camera_rvel
 
 		# params for Shi-Tomasi corner detection
-		self.feature_params = dict(maxCorners=30,
-		                           qualityLevel=0.3,
-		                           minDistance=7,
-		                           blockSize=7)
+		self.feature_params = dict(maxCorners=300,
+		                           qualityLevel=0.8,
+		                           minDistance=11,
+		                           blockSize=11)
 		# Parameters for lucas kanade optical flow
 		self.lk_params = dict(winSize=(15, 15),
 		                      maxLevel=3,
@@ -166,7 +166,7 @@ class StructureFromMotion:
 					frame_points.append(world_pos)
 				else:
 					frame_points.append(cam_pos)
-			self.p0 = good_new.reshape(-1, 1, 2)
+			self.p0 = cv2.goodFeaturesToTrack(self.previous_frame, mask=None, **self.feature_params)
 
 		self.previous_frame = current_frame.copy()
 
@@ -180,10 +180,13 @@ def draw_3d_topdown_view(image, points, y_zoom=1, z_zoom=10):
 	height = image.shape[0]
 
 	for p in points:
-		x = int(p[0])
-		y = int(255 * p[1] / (height * y_zoom))
-		z = int(height - height * p[2] / z_zoom)
-		cv2.circle(image, (x, z), 5, (y, y, y), -1)
+		try:
+			x = int(p[0])
+			y = int(255 * p[1] / (height * y_zoom))
+			z = int(height - height * p[2] / z_zoom)
+			cv2.circle(image, (x, z), 5, (y, y, y), -1)
+		except OverflowError:
+			pass
 
 
 def draw_tracked_points(image, points):
@@ -196,14 +199,14 @@ def draw_tracked_points(image, points):
 
 
 def main():
-	video_source = "ringtest.avi"
-	out = cv2.VideoWriter('ring_output.avi', -1, 30.0, (640 * 2, 360))
+	video_source = "WIN_20181103_17_55_12_Pro.mp4"
+	out = cv2.VideoWriter('rotation_output.avi', -1, 30.0, (640 * 2, 360))
 	cap = cv2.VideoCapture(video_source)
 
 	structureFromMotion = StructureFromMotion(camera_pos=np.array([0, 0, 0]),
-	                                          camera_vel=np.array((0, 0, 5)),
+	                                          camera_vel=np.array((0, 0, 0)),
 	                                          camera_rot=np.array([0, 0, 0]),
-	                                          camera_rvel=np.array([0, 0, 0]),
+	                                          camera_rvel=np.array([4, 0, 0]),
 	                                          camera_space=True)
 	ret, first_frame = cap.read()
 
@@ -234,9 +237,9 @@ def main():
 			draw_3d_topdown_view(topdown, structureFromMotion.frame_points)
 			final = np.hstack((frame, topdown))
 			wt = time.time()
-			out.write(final)
+			#out.write(final)
 			dwt = time.time() - wt
-			# cv2.imshow("", final)
+			cv2.imshow("", final)
 			# Keyboard input handling
 			k = cv2.waitKey(30) & 0xff
 			if k == 27:
@@ -248,6 +251,8 @@ def main():
 				maxFPS = FPS
 			if FPS < minFPS:
 				minFPS = FPS
+			print(FPS)
+
 	else:
 		print("Problem with video stream... Unable to capture first frame")
 
